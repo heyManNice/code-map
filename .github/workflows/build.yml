@@ -1,0 +1,50 @@
+name: Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - "ci/**"
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+env:
+  MAKEPAD_COMMIT: a4ea2536a4ab223fb31e0282be923191230f44fe
+  RUST_TARGET: x86_64-pc-windows-msvc
+
+jobs:
+  windows-x64:
+    name: Windows x64
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout Code Map
+        uses: actions/checkout@v4
+
+      - name: Checkout Makepad
+        shell: pwsh
+        run: |
+          git clone --filter=blob:none https://github.com/makepad/makepad.git ..\makepad
+          git -C ..\makepad checkout $env:MAKEPAD_COMMIT
+
+      - name: Install Rust target
+        shell: pwsh
+        run: rustup target add $env:RUST_TARGET
+
+      - name: Build release binaries
+        shell: pwsh
+        run: cargo build --release --target $env:RUST_TARGET
+
+      - name: Upload Windows binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-map-windows-x64
+          path: |
+            target/x86_64-pc-windows-msvc/release/code-map.exe
+            target/x86_64-pc-windows-msvc/release/scan.exe
+          if-no-files-found: error
